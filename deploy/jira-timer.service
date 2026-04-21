@@ -1,0 +1,61 @@
+[Unit]
+Description=Jira Timer App
+After=network.target
+Documentation=file:///opt/jira-timer/README.md
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/opt/jira-timer
+ExecStart=/usr/bin/node server.js
+Restart=on-failure
+RestartSec=5
+
+# Environment
+Environment=NODE_ENV=production
+Environment=BIND_ADDR=127.0.0.1
+Environment=PORT=8081
+Environment=BEHIND_PROXY=true
+EnvironmentFile=/etc/jira-timer/secrets.env
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=jira-timer
+
+# --- Sandboxing ---
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectClock=true
+ProtectHostname=true
+ProtectProc=invisible
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+RestrictNamespaces=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallFilter=~@privileged @resources
+CapabilityBoundingSet=
+AmbientCapabilities=
+UMask=0077
+
+# Only these paths are writable by the service
+ReadWritePaths=/opt/jira-timer/data
+
+# Resource limits
+LimitNOFILE=4096
+TasksMax=64
+
+[Install]
+WantedBy=multi-user.target

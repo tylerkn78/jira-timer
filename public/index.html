@@ -1,0 +1,2085 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Jira Timer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --blue-900: #0747a6;
+    --blue-700: #0052cc;
+    --blue-500: #0065ff;
+    --blue-400: #2684ff;
+    --blue-200: #4c9aff;
+    --surface: #0a1628;
+    --surface-2: #0d1f3c;
+    --surface-3: #122347;
+    --surface-4: #1a3160;
+    --text-primary: #ffffff;
+    --text-secondary: #a8c4e8;
+    --text-muted: #5e7fa8;
+    --green: #36b37e;
+    --green-dim: #1e3d2f;
+    --red: #ff5630;
+    --red-dim: #3d1a10;
+    --yellow: #ffab00;
+    --purple: #6554c0;
+    --purple-dim: #1e1a3d;
+    --border: rgba(74, 144, 226, 0.18);
+    --radius: 10px;
+    --radius-lg: 14px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    font-family: 'Sora', sans-serif;
+    background: var(--surface);
+    color: var(--text-primary);
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 60% 50% at 10% 20%, rgba(0,82,204,0.22) 0%, transparent 70%),
+      radial-gradient(ellipse 50% 60% at 90% 80%, rgba(38,132,255,0.12) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ===================== LOGIN ===================== */
+  #login-screen {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    background: var(--surface);
+    padding: 20px;
+  }
+
+  #login-screen::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 70% 60% at 30% 40%, rgba(0,82,204,0.3) 0%, transparent 70%),
+      radial-gradient(ellipse 60% 50% at 80% 70%, rgba(38,132,255,0.18) 0%, transparent 70%);
+  }
+
+  .login-card {
+    position: relative;
+    width: 100%;
+    max-width: 380px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 36px 28px;
+    box-shadow: 0 24px 64px rgba(0,0,0,0.5);
+    animation: slideUp 0.35s ease;
+  }
+
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(18px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .login-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 6px;
+    justify-content: center;
+  }
+
+  .login-logo svg { width: 34px; height: 34px; }
+
+  .login-logo span {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: -0.4px;
+  }
+
+  .login-subtitle {
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.72rem;
+    margin-bottom: 28px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .form-group { margin-bottom: 14px; }
+
+  .form-group label {
+    display: block;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 7px;
+  }
+
+  .form-group input {
+    width: 100%;
+    padding: 13px 16px;
+    background: var(--surface-3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text-primary);
+    font-family: 'Sora', sans-serif;
+    font-size: 16px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    appearance: none;
+  }
+
+  .form-group input:focus {
+    border-color: var(--blue-400);
+    box-shadow: 0 0 0 3px rgba(38,132,255,0.15);
+  }
+
+  .login-error {
+    color: var(--red);
+    font-size: 0.8rem;
+    text-align: center;
+    margin-top: 8px;
+    min-height: 18px;
+  }
+
+  .btn-primary {
+    width: 100%;
+    padding: 15px;
+    background: var(--blue-500);
+    color: white;
+    border: none;
+    border-radius: var(--radius);
+    font-family: 'Sora', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 8px;
+    transition: background 0.2s, transform 0.1s;
+    box-shadow: 0 4px 16px rgba(0,101,255,0.3);
+  }
+
+  .btn-primary:active { transform: scale(0.98); background: var(--blue-400); }
+
+  /* ===================== PASSWORD CHANGE ===================== */
+  #password-change-screen {
+    position: fixed;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 110;
+    background: var(--surface);
+    padding: 20px;
+  }
+  #password-change-screen.visible { display: flex; }
+
+  #password-change-screen::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 70% 60% at 30% 40%, rgba(0,82,204,0.3) 0%, transparent 70%),
+      radial-gradient(ellipse 60% 50% at 80% 70%, rgba(38,132,255,0.18) 0%, transparent 70%);
+  }
+
+  .pwd-intro {
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    text-align: center;
+    margin-bottom: 24px;
+    line-height: 1.4;
+  }
+
+  .pwd-intro.required {
+    color: var(--yellow);
+  }
+
+  .btn-secondary-nav {
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.18s;
+    flex-shrink: 0;
+  }
+  .btn-secondary-nav:hover { border-color: var(--blue-400); color: var(--blue-400); }
+
+  /* ===================== APP ===================== */
+  #app { display: none; position: relative; z-index: 1; min-height: 100vh; }
+
+  /* ---- NAVBAR ---- */
+  .navbar {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: rgba(10, 22, 40, 0.94);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 16px;
+    height: 54px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .nav-brand {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: var(--text-primary);
+    text-decoration: none;
+    flex-shrink: 0;
+  }
+
+  .nav-brand svg { width: 24px; height: 24px; flex-shrink: 0; }
+  .nav-brand-text { display: none; }
+  .nav-brand-sub { display: none; }
+
+  .nav-tabs { display: flex; gap: 4px; }
+
+  .nav-tab {
+    padding: 7px 14px;
+    border-radius: 7px;
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    font-family: 'Sora', sans-serif;
+    font-size: 0.82rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.18s;
+    white-space: nowrap;
+  }
+
+  .nav-tab:hover { background: var(--surface-3); }
+  .nav-tab.active { background: var(--blue-700); color: white; }
+  .nav-tab.admin-tab { color: var(--purple); }
+  .nav-tab.admin-tab:hover { background: var(--purple-dim); }
+  .nav-tab.admin-tab.active { background: var(--purple); color: white; }
+
+  .nav-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+
+  .nav-user { display: none; font-size: 0.73rem; color: var(--text-muted); }
+
+  .btn-logout {
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.18s;
+    flex-shrink: 0;
+  }
+  .btn-logout-text { display: none; }
+  .btn-logout:hover { border-color: var(--red); color: var(--red); }
+
+  /* ---- PAGES ---- */
+  .page { display: none; padding: 20px 14px 40px; max-width: 1100px; margin: 0 auto; }
+  .page.active { display: block; animation: fadeIn 0.22s ease; }
+
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+  .page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .page-title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: -0.2px;
+  }
+
+  .page-title span {
+    display: block;
+    font-size: 0.72rem;
+    font-weight: 400;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+
+  .sync-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    padding: 4px 9px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: var(--surface-2);
+    white-space: nowrap;
+  }
+
+  .sync-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--green);
+    animation: pulse 2s infinite;
+    flex-shrink: 0;
+  }
+
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  /* ---- STATS ---- */
+  .stat-bar {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+
+  .stat-chip {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+  }
+
+  .stat-chip .val {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.15rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+
+  .stat-chip .lbl {
+    font-size: 0.62rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+  }
+
+  /* ---- TICKET INPUT ---- */
+  .ticket-input-zone {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+
+  .ticket-input {
+    flex: 1;
+    min-width: 0;
+    padding: 13px 14px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text-primary);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 16px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    text-transform: uppercase;
+    appearance: none;
+  }
+
+  .ticket-input::placeholder {
+    color: var(--text-muted);
+    text-transform: none;
+    font-family: 'Sora', sans-serif;
+    font-size: 0.85rem;
+  }
+
+  .ticket-input:focus {
+    border-color: var(--blue-400);
+    box-shadow: 0 0 0 3px rgba(38,132,255,0.12);
+  }
+
+  .btn-add {
+    padding: 13px 18px;
+    background: var(--blue-500);
+    color: white;
+    border: none;
+    border-radius: var(--radius);
+    font-family: 'Sora', sans-serif;
+    font-size: 0.88rem;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    flex-shrink: 0;
+    box-shadow: 0 4px 14px rgba(0,101,255,0.25);
+    transition: background 0.18s, transform 0.1s;
+  }
+
+  .btn-add:active { background: var(--blue-400); transform: scale(0.97); }
+
+  .input-error {
+    color: var(--red);
+    font-size: 0.76rem;
+    margin-bottom: 12px;
+    min-height: 16px;
+  }
+
+  /* ---- TICKET SECTION HEADERS ---- */
+  .ticket-section { margin-bottom: 8px; }
+
+  .ticket-section-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 4px 8px;
+    margin-bottom: 6px;
+  }
+
+  .ticket-section-label {
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    white-space: nowrap;
+  }
+
+  .ticket-section-label.label-running { color: var(--green); }
+  .ticket-section-label.label-paused { color: var(--yellow); }
+  .ticket-section-label.label-done { color: var(--text-muted); }
+
+  .ticket-section-line {
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .ticket-section-count {
+    font-size: 0.6rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    background: var(--surface-3);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 2px 7px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* ---- TICKET CARD - MOBILE FIRST ---- */
+  .tickets-list { display: flex; flex-direction: column; gap: 10px; }
+
+  .ticket-card {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    transition: border-color 0.2s;
+    animation: cardIn 0.28s ease;
+    position: relative;
+  }
+
+  @keyframes cardIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .ticket-card::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: var(--blue-400);
+    transition: background 0.2s;
+  }
+
+  .ticket-card.running::before { background: var(--green); }
+  .ticket-card.completed::before { background: var(--text-muted); }
+
+  .card-top {
+    padding: 14px 16px 12px 20px;
+  }
+
+  .card-top-row1 {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 2px;
+  }
+
+  .ticket-info { min-width: 0; }
+
+  .ticket-number {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--blue-200);
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .ticket-status {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-weight: 600;
+    margin-top: 2px;
+  }
+
+  .status-running { color: var(--green); }
+  .status-paused { color: var(--yellow); }
+  .status-completed { color: var(--text-muted); }
+
+  .ticket-timer {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.75rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    letter-spacing: 0.02em;
+    margin-top: 6px;
+    display: block;
+  }
+
+  .ticket-timer.running { color: var(--green); }
+
+  .card-actions {
+    display: flex;
+    border-top: 1px solid var(--border);
+  }
+
+  .card-btn {
+    flex: 1;
+    padding: 12px 8px;
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    font-family: 'Sora', sans-serif;
+    font-size: 0.72rem;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    transition: background 0.15s, color 0.15s;
+    letter-spacing: 0.02em;
+  }
+
+  .card-btn + .card-btn { border-left: 1px solid var(--border); }
+  .card-btn svg { flex-shrink: 0; }
+  .card-btn.play { color: var(--green); }
+  .card-btn.play:active { background: var(--green-dim); }
+  .card-btn.stop { color: var(--yellow); }
+  .card-btn.stop:active { background: rgba(80,60,0,0.4); }
+  .card-btn.complete { color: var(--blue-200); }
+  .card-btn.complete:active { background: var(--surface-4); }
+  .card-btn.delete { color: var(--red); }
+  .card-btn.delete:active { background: var(--red-dim); }
+
+  .card-done-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px 12px 20px;
+    border-top: 1px solid var(--border);
+    gap: 10px;
+  }
+
+  .done-label {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .done-time {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+  }
+
+  .btn-remove {
+    width: 30px;
+    height: 30px;
+    border-radius: 7px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+
+  .btn-remove:active { background: var(--red-dim); color: var(--red); border-color: transparent; }
+
+  /* Empty state */
+  .empty-state {
+    text-align: center;
+    padding: 56px 20px;
+    color: var(--text-muted);
+  }
+
+  .empty-state svg { width: 42px; height: 42px; opacity: 0.22; margin-bottom: 14px; }
+  .empty-state p { font-size: 0.88rem; margin-bottom: 6px; }
+  .empty-state small { font-size: 0.75rem; }
+
+  /* ---- HISTORY ---- */
+  .history-controls {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 18px;
+  }
+
+  .filter-label {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .sort-select {
+    padding: 8px 12px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text-primary);
+    font-family: 'Sora', sans-serif;
+    font-size: 0.83rem;
+    outline: none;
+    cursor: pointer;
+    appearance: none;
+  }
+
+  .history-group { margin-bottom: 22px; }
+
+  .history-group-header {
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-muted);
+    padding: 0 4px 8px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 6px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .history-group-total {
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--blue-200);
+    font-size: 0.76rem;
+  }
+
+  .history-row {
+    display: flex;
+    align-items: center;
+    padding: 11px 12px;
+    border-radius: 8px;
+    gap: 10px;
+    transition: background 0.14s;
+    animation: cardIn 0.25s ease;
+  }
+
+  .history-row:hover { background: var(--surface-2); }
+
+  .history-ticket-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.86rem;
+    color: var(--blue-200);
+    flex: 1;
+    letter-spacing: 0.04em;
+  }
+
+  .history-completed-at {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    white-space: nowrap;
+  }
+
+  .history-time {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.86rem;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    min-width: 60px;
+    text-align: right;
+  }
+
+  .btn-del-history {
+    width: 32px; height: 32px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.14s;
+    flex-shrink: 0;
+  }
+
+  .btn-del-history:hover { background: var(--red-dim); color: var(--red); border-color: transparent; }
+  .btn-del-history:active { background: var(--red-dim); color: var(--red); }
+
+  /* ===================== ADMIN PAGE ===================== */
+
+  .admin-section {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    margin-bottom: 24px;
+    overflow: hidden;
+  }
+
+  .admin-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface-3);
+  }
+
+  .admin-section-title {
+    font-size: 0.82rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-secondary);
+  }
+
+  .admin-section-title.purple { color: var(--purple); }
+
+  .admin-section-body { padding: 20px; }
+
+  /* Add user form */
+  .add-user-form {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: flex-end;
+  }
+
+  .add-user-form .field {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    flex: 1;
+    min-width: 130px;
+  }
+
+  .add-user-form label {
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .add-user-form input {
+    padding: 10px 12px;
+    background: var(--surface-3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text-primary);
+    font-family: 'Sora', sans-serif;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s;
+    appearance: none;
+  }
+
+  .add-user-form input:focus {
+    border-color: var(--purple);
+    box-shadow: 0 0 0 3px rgba(101,84,192,0.15);
+  }
+
+  .btn-create-user {
+    padding: 10px 18px;
+    background: var(--purple);
+    color: white;
+    border: none;
+    border-radius: var(--radius);
+    font-family: 'Sora', sans-serif;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    flex-shrink: 0;
+    transition: background 0.18s, transform 0.1s;
+    align-self: flex-end;
+  }
+
+  .btn-create-user:hover { background: #7465cc; }
+  .btn-create-user:active { transform: scale(0.97); }
+
+  .add-user-error {
+    color: var(--red);
+    font-size: 0.74rem;
+    margin-top: 8px;
+    min-height: 16px;
+  }
+
+  /* Users table */
+  .users-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 16px;
+  }
+
+  .users-table th {
+    text-align: left;
+    font-size: 0.62rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-muted);
+    padding: 0 12px 10px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .users-table td {
+    padding: 12px 12px;
+    border-bottom: 1px solid rgba(74,144,226,0.08);
+    font-size: 0.85rem;
+  }
+
+  .users-table tr:last-child td { border-bottom: none; }
+
+  .user-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.82rem;
+    color: var(--text-primary);
+  }
+
+  .user-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--text-muted);
+    flex-shrink: 0;
+  }
+
+  .role-badge {
+    display: inline-block;
+    font-size: 0.6rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    padding: 2px 7px;
+    border-radius: 20px;
+  }
+
+  .role-badge.admin { background: var(--purple-dim); color: var(--purple); border: 1px solid rgba(101,84,192,0.3); }
+  .role-badge.member { background: var(--surface-4); color: var(--text-muted); border: 1px solid var(--border); }
+
+  .btn-delete-user {
+    padding: 5px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-muted);
+    font-family: 'Sora', sans-serif;
+    font-size: 0.72rem;
+    cursor: pointer;
+    transition: all 0.14s;
+    white-space: nowrap;
+  }
+
+  .btn-delete-user:hover { background: var(--red-dim); color: var(--red); border-color: transparent; }
+
+  /* Work viewer */
+  .work-viewer-controls {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .work-viewer-controls label {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    white-space: nowrap;
+  }
+
+  .user-select {
+    padding: 9px 14px;
+    background: var(--surface-3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text-primary);
+    font-family: 'Sora', sans-serif;
+    font-size: 0.85rem;
+    outline: none;
+    cursor: pointer;
+    appearance: none;
+    transition: border-color 0.2s;
+  }
+
+  .user-select:focus { border-color: var(--purple); }
+
+  .btn-view-work {
+    padding: 9px 16px;
+    background: var(--surface-4);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text-secondary);
+    font-family: 'Sora', sans-serif;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.18s;
+    white-space: nowrap;
+  }
+
+  .btn-view-work:hover { background: var(--purple-dim); border-color: rgba(101,84,192,0.4); color: var(--purple); }
+
+  .work-viewer-results {
+    margin-top: 20px;
+  }
+
+  .work-viewer-user-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .work-viewer-username {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--text-primary);
+  }
+
+  .work-viewer-tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 16px;
+  }
+
+  .work-viewer-tab {
+    padding: 6px 14px;
+    border-radius: 7px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-secondary);
+    font-family: 'Sora', sans-serif;
+    font-size: 0.78rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.18s;
+  }
+
+  .work-viewer-tab:hover { background: var(--surface-3); }
+  .work-viewer-tab.active { background: var(--purple); border-color: transparent; color: white; }
+
+  .work-viewer-pane { display: none; }
+  .work-viewer-pane.active { display: block; }
+
+  /* Readonly ticket cards (no action buttons) */
+  .ticket-card.readonly::before { background: var(--purple); }
+  .ticket-card.readonly.running::before { background: var(--green); }
+  .ticket-card.readonly.completed::before { background: var(--text-muted); }
+
+  /* ---- TOAST ---- */
+  .toast-container {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 999;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    width: calc(100vw - 32px);
+    max-width: 360px;
+    pointer-events: none;
+  }
+
+  .toast {
+    width: 100%;
+    padding: 12px 18px;
+    border-radius: 10px;
+    font-size: 0.84rem;
+    font-weight: 500;
+    text-align: center;
+    animation: toastIn 0.28s ease;
+    box-shadow: 0 8px 28px rgba(0,0,0,0.35);
+    pointer-events: auto;
+  }
+
+  .toast.success { background: var(--green); color: white; }
+  .toast.error { background: var(--red); color: white; }
+  .toast.info { background: var(--blue-700); color: white; border: 1px solid var(--blue-400); }
+
+  @keyframes toastIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ===================== DESKTOP UPGRADES ===================== */
+  .card-inline-actions { display: none; }
+  .completed-inline { display: none; }
+
+  @media (min-width: 600px) {
+    .navbar { padding: 0 24px; height: 58px; }
+    .nav-brand svg { width: 25px; height: 25px; }
+    .nav-brand-text { display: inline; }
+    .nav-brand-sub { display: inline; font-size: 0.67rem; font-weight: 400; color: var(--text-muted); margin-left: 2px; }
+    .nav-user { display: block; }
+    .btn-logout { width: auto; height: auto; padding: 7px 14px; font-family: "Sora", sans-serif; font-size: 0.78rem; }
+    .btn-logout-text { display: inline; }
+    .page { padding: 32px 24px 48px; }
+    .page-title { font-size: 1.4rem; }
+    .stat-bar { grid-template-columns: repeat(4, 1fr); gap: 12px; }
+    .stat-chip { padding: 14px 16px; }
+    .stat-chip .val { font-size: 1.2rem; }
+
+    .ticket-card { overflow: visible; }
+    .ticket-card::before { border-radius: 3px 0 0 3px; }
+
+    .card-top {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 18px 20px;
+    }
+
+    .card-top-row1 { display: contents; }
+    .ticket-info { flex: 1; }
+
+    .ticket-timer {
+      font-size: 1.5rem;
+      margin-top: 0;
+      flex-shrink: 0;
+    }
+
+    .card-actions { display: none; }
+    .card-done-row { display: none; }
+    .card-inline-actions { display: flex; gap: 7px; align-items: center; flex-shrink: 0; }
+    .completed-inline { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+
+    .btn-icon {
+      width: 38px; height: 38px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text-secondary);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.18s;
+    }
+
+    .btn-icon:hover { background: var(--surface-4); color: var(--text-primary); }
+    .btn-icon.play { border-color: rgba(54,179,126,0.4); color: var(--green); }
+    .btn-icon.play:hover { background: var(--green-dim); }
+    .btn-icon.stop { border-color: rgba(255,171,0,0.4); color: var(--yellow); }
+    .btn-icon.stop:hover { background: rgba(80,60,0,0.35); }
+    .btn-icon.complete { border-color: rgba(74,144,226,0.4); color: var(--blue-200); }
+    .btn-icon.complete:hover { background: var(--surface-4); color: white; }
+    .btn-icon.delete { border-color: rgba(255,86,48,0.3); color: var(--red); }
+    .btn-icon.delete:hover { background: var(--red-dim); }
+
+    .completed-time-badge {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      background: var(--surface-4);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 5px 10px;
+      white-space: nowrap;
+    }
+
+    .ticket-input { font-size: 0.95rem; padding: 13px 16px; }
+    .btn-add { padding: 13px 22px; font-size: 0.9rem; }
+  }
+
+  @media (min-width: 600px) {
+    .mobile-only { display: none !important; }
+  }
+
+  @media (min-width: 900px) {
+    .page { padding: 40px 32px 56px; }
+    .navbar { padding: 0 32px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">
+      <svg viewBox="0 0 32 32" fill="none">
+        <path d="M16 2L28 8V16C28 22.627 22.627 28 16 28C9.373 28 4 22.627 4 16V8L16 2Z" fill="#0052cc" opacity="0.3"/>
+        <path d="M16 6L14 16H18L20 24H24L22 14H18L17 8H16Z" fill="#2684ff"/>
+        <path d="M10 12L12 16L10 20H14L16 16L14 12H10Z" fill="#4c9aff" opacity="0.8"/>
+      </svg>
+      <span>Jira Timer</span>
+    </div>
+    <p class="login-subtitle">Time Tracking</p>
+    <div class="form-group">
+      <label>Username</label>
+      <input type="text" id="login-username" placeholder="Enter username" autocomplete="username" autocorrect="off" autocapitalize="off">
+    </div>
+    <div class="form-group">
+      <label>Password</label>
+      <input type="password" id="login-password" placeholder="Enter password" autocomplete="current-password">
+    </div>
+    <div class="login-error" id="login-error"></div>
+    <button class="btn-primary" id="login-btn" onclick="doLogin()">Sign In</button>
+  </div>
+</div>
+
+<!-- PASSWORD CHANGE -->
+<div id="password-change-screen">
+  <div class="login-card">
+    <div class="login-logo">
+      <svg viewBox="0 0 32 32" fill="none">
+        <path d="M16 2L28 8V16C28 22.627 22.627 28 16 28C9.373 28 4 22.627 4 16V8L16 2Z" fill="#0052cc" opacity="0.3"/>
+        <path d="M16 6L14 16H18L20 24H24L22 14H18L17 8H16Z" fill="#2684ff"/>
+        <path d="M10 12L12 16L10 20H14L16 16L14 12H10Z" fill="#4c9aff" opacity="0.8"/>
+      </svg>
+      <span>Change Password</span>
+    </div>
+    <p class="login-subtitle">Account Security</p>
+    <p class="pwd-intro" id="pwd-intro">Set a new password for your account. Minimum 12 characters.</p>
+    <div class="form-group">
+      <label>Current password</label>
+      <input type="password" id="pwd-current" placeholder="Current password" autocomplete="current-password">
+    </div>
+    <div class="form-group">
+      <label>New password</label>
+      <input type="password" id="pwd-new" placeholder="Min 12 characters" autocomplete="new-password">
+    </div>
+    <div class="form-group">
+      <label>Confirm new password</label>
+      <input type="password" id="pwd-confirm" placeholder="Re-enter new password" autocomplete="new-password">
+    </div>
+    <div class="login-error" id="pwd-error"></div>
+    <button class="btn-primary" id="pwd-btn" onclick="doChangePassword()">Update Password</button>
+    <button class="btn-primary" id="pwd-cancel-btn" style="background:transparent;color:var(--text-secondary);box-shadow:none;margin-top:4px;display:none" onclick="cancelChangePassword()">Cancel</button>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <nav class="navbar">
+    <a class="nav-brand" href="#">
+      <svg viewBox="0 0 32 32" fill="none">
+        <path d="M16 2L28 8V16C28 22.627 22.627 28 16 28C9.373 28 4 22.627 4 16V8L16 2Z" fill="#0052cc" opacity="0.4"/>
+        <path d="M16 6L14 16H18L20 24H24L22 14H18L17 8H16Z" fill="#2684ff"/>
+        <path d="M10 12L12 16L10 20H14L16 16L14 12H10Z" fill="#4c9aff" opacity="0.8"/>
+      </svg>
+      <span class="nav-brand-text">Jira Timer<span class="nav-brand-sub">&nbsp;· Georgetown IT</span></span>
+    </a>
+    <div class="nav-tabs">
+      <button class="nav-tab active" onclick="showPage('active')">Active</button>
+      <button class="nav-tab" onclick="showPage('history')">History</button>
+      <button class="nav-tab admin-tab" id="admin-nav-tab" style="display:none" onclick="showPage('admin')">Admin</button>
+    </div>
+    <div class="nav-right">
+      <span class="nav-user" id="nav-username"></span>
+      <button class="btn-secondary-nav" onclick="openChangePassword()" title="Change Password">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+      </button>
+      <button class="btn-logout" onclick="doLogout()" title="Sign Out">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+        <span class="btn-logout-text">&nbsp;Sign Out</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- ACTIVE PAGE -->
+  <div class="page active" id="page-active">
+    <div class="page-header">
+      <div class="page-title">
+        Active Tickets
+        <span id="active-date"></span>
+      </div>
+      <div class="sync-badge">
+        <div class="sync-dot"></div>
+        Server timers
+      </div>
+    </div>
+    <div class="stat-bar" id="active-stats"></div>
+    <div class="ticket-input-zone">
+      <input class="ticket-input" id="ticket-input" type="text" placeholder="Ticket # (IT-12345)"
+        maxlength="20" autocorrect="off" autocapitalize="characters" spellcheck="false"
+        onkeydown="if(event.key==='Enter') addTicket()">
+      <button class="btn-add" onclick="addTicket()">+ Add</button>
+    </div>
+    <div class="input-error" id="input-error"></div>
+    <div class="tickets-list" id="tickets-list"></div>
+  </div>
+
+  <!-- HISTORY PAGE -->
+  <div class="page" id="page-history">
+    <div class="page-header">
+      <div class="page-title">
+        History
+        <span>All completed tickets</span>
+      </div>
+    </div>
+    <div class="history-controls">
+      <span class="filter-label">Sort</span>
+      <select class="sort-select" id="sort-select" onchange="loadHistory()">
+        <option value="newest">Newest First</option>
+        <option value="oldest">Oldest First</option>
+      </select>
+    </div>
+    <div id="history-list"></div>
+  </div>
+
+  <!-- ADMIN PAGE -->
+  <div class="page" id="page-admin">
+    <div class="page-header">
+      <div class="page-title">
+        Admin
+        <span>User management &amp; work overview</span>
+      </div>
+    </div>
+
+    <!-- Add User -->
+    <div class="admin-section">
+      <div class="admin-section-header">
+        <span class="admin-section-title purple">Add User</span>
+      </div>
+      <div class="admin-section-body">
+        <div class="add-user-form">
+          <div class="field">
+            <label>Username</label>
+            <input type="text" id="new-username" placeholder="e.g. jsmith" autocorrect="off" autocapitalize="off" autocomplete="off">
+          </div>
+          <div class="field">
+            <label>Password</label>
+            <input type="password" id="new-password" placeholder="Min 6 characters" autocomplete="new-password">
+          </div>
+          <button class="btn-create-user" onclick="createUser()">Create User</button>
+        </div>
+        <div class="add-user-error" id="add-user-error"></div>
+      </div>
+    </div>
+
+    <!-- Users List -->
+    <div class="admin-section">
+      <div class="admin-section-header">
+        <span class="admin-section-title">Users</span>
+        <span id="user-count" style="font-size:0.72rem;color:var(--text-muted)"></span>
+      </div>
+      <div class="admin-section-body" style="padding:0">
+        <table class="users-table">
+          <thead>
+            <tr>
+              <th>Username</th>
+              <th>Role</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="users-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- View Work -->
+    <div class="admin-section">
+      <div class="admin-section-header">
+        <span class="admin-section-title purple">View Work</span>
+      </div>
+      <div class="admin-section-body">
+        <div class="work-viewer-controls">
+          <label>User</label>
+          <select class="user-select" id="work-viewer-select">
+            <option value="">Select a user...</option>
+          </select>
+          <button class="btn-view-work" onclick="loadWorkView()">View</button>
+        </div>
+        <div class="work-viewer-results" id="work-viewer-results" style="display:none">
+          <div class="work-viewer-user-header">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--purple);flex-shrink:0"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+            <span class="work-viewer-username" id="work-viewer-username"></span>
+          </div>
+          <div class="work-viewer-tabs">
+            <button class="work-viewer-tab active" onclick="switchWorkTab('active')">Active</button>
+            <button class="work-viewer-tab" onclick="switchWorkTab('history')">History</button>
+          </div>
+          <div class="work-viewer-pane active" id="wv-pane-active"></div>
+          <div class="work-viewer-pane" id="wv-pane-history"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container" id="toasts"></div>
+
+<script>
+let tickets = [];
+let isAdmin = false;
+let pollInterval = null;
+let localTickInterval = null;
+let serverSyncInterval = null;
+let timerOffsets = {};
+
+// ---- CSRF-aware fetch wrapper ----
+// Transparently attaches the X-CSRF-Token header to all non-GET API calls.
+// On CSRF failure, fetches a fresh token and retries once.
+let _csrfToken = null;
+const _origFetch = window.fetch.bind(window);
+
+async function _fetchCsrfToken() {
+  const res = await _origFetch('/api/csrf', { credentials: 'same-origin' });
+  if (!res.ok) throw new Error('Could not fetch CSRF token');
+  const data = await res.json();
+  _csrfToken = data.csrfToken;
+  return _csrfToken;
+}
+
+async function _ensureCsrfToken() {
+  if (_csrfToken) return _csrfToken;
+  return _fetchCsrfToken();
+}
+
+window.fetch = async function(url, options = {}) {
+  const method = (options.method || 'GET').toUpperCase();
+  const needsCsrf = method !== 'GET' && method !== 'HEAD' && typeof url === 'string' && url.startsWith('/api/');
+  options.credentials = options.credentials || 'same-origin';
+  if (needsCsrf) {
+    options.headers = Object.assign({}, options.headers || {}, {
+      'X-CSRF-Token': await _ensureCsrfToken()
+    });
+  }
+  let res = await _origFetch(url, options);
+  if (needsCsrf && res.status === 403) {
+    // Possibly a stale token — try once more with a fresh one.
+    let body = null;
+    try { body = await res.clone().json(); } catch (_) {}
+    if (body && /csrf/i.test(body.error || '')) {
+      _csrfToken = null;
+      options.headers['X-CSRF-Token'] = await _ensureCsrfToken();
+      res = await _origFetch(url, options);
+    }
+  }
+  return res;
+};
+
+// ---- AUTH ----
+async function doLogin() {
+  const username = document.getElementById('login-username').value.trim();
+  const password = document.getElementById('login-password').value;
+  document.getElementById('login-error').textContent = '';
+  const btn = document.getElementById('login-btn');
+  btn.textContent = 'Signing in...';
+  btn.disabled = true;
+  try {
+    const res = await fetch('/api/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+    isAdmin = !!data.isAdmin;
+    _csrfToken = null; // force fresh token tied to the new session id
+    if (data.mustChangePassword) {
+      showPasswordChangeRequired(data.username);
+    } else {
+      await enterApp(data.username);
+    }
+  } catch (e) {
+    document.getElementById('login-error').textContent = e.message || 'Login failed';
+  } finally {
+    btn.textContent = 'Sign In';
+    btn.disabled = false;
+  }
+}
+
+async function enterApp(username) {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('password-change-screen').classList.remove('visible');
+  document.getElementById('app').style.display = 'block';
+  document.getElementById('nav-username').textContent = username;
+  if (isAdmin) document.getElementById('admin-nav-tab').style.display = '';
+  await loadTickets();
+  startPolling();
+}
+
+// ---- PASSWORD CHANGE ----
+let _pwdChangeRequired = false;
+
+function showPasswordChangeRequired(username) {
+  _pwdChangeRequired = true;
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'none';
+  const intro = document.getElementById('pwd-intro');
+  intro.classList.add('required');
+  intro.textContent = `Hi ${username}. Your password must be changed before continuing. Minimum 12 characters.`;
+  document.getElementById('pwd-cancel-btn').style.display = 'none';
+  document.getElementById('pwd-current').value = '';
+  document.getElementById('pwd-new').value = '';
+  document.getElementById('pwd-confirm').value = '';
+  document.getElementById('pwd-error').textContent = '';
+  document.getElementById('password-change-screen').classList.add('visible');
+  setTimeout(() => document.getElementById('pwd-current').focus(), 50);
+}
+
+function openChangePassword() {
+  _pwdChangeRequired = false;
+  const intro = document.getElementById('pwd-intro');
+  intro.classList.remove('required');
+  intro.textContent = 'Set a new password for your account. Minimum 12 characters.';
+  document.getElementById('pwd-cancel-btn').style.display = '';
+  document.getElementById('pwd-current').value = '';
+  document.getElementById('pwd-new').value = '';
+  document.getElementById('pwd-confirm').value = '';
+  document.getElementById('pwd-error').textContent = '';
+  document.getElementById('password-change-screen').classList.add('visible');
+  setTimeout(() => document.getElementById('pwd-current').focus(), 50);
+}
+
+function cancelChangePassword() {
+  if (_pwdChangeRequired) return; // can't cancel a required change
+  document.getElementById('password-change-screen').classList.remove('visible');
+}
+
+async function doChangePassword() {
+  const currentPassword = document.getElementById('pwd-current').value;
+  const newPassword = document.getElementById('pwd-new').value;
+  const confirm = document.getElementById('pwd-confirm').value;
+  const err = document.getElementById('pwd-error');
+  err.textContent = '';
+  if (!currentPassword || !newPassword) { err.textContent = 'All fields are required.'; return; }
+  if (newPassword.length < 12) { err.textContent = 'New password must be at least 12 characters.'; return; }
+  if (newPassword !== confirm) { err.textContent = 'New passwords do not match.'; return; }
+  const btn = document.getElementById('pwd-btn');
+  btn.textContent = 'Updating...'; btn.disabled = true;
+  try {
+    const res = await fetch('/api/password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ currentPassword, newPassword })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Could not update password');
+    document.getElementById('password-change-screen').classList.remove('visible');
+    toast('Password updated', 'success');
+    if (_pwdChangeRequired) {
+      // Continue into the app now that the required change is done.
+      const me = await (await fetch('/api/me')).json();
+      isAdmin = !!me.isAdmin;
+      await enterApp(me.user);
+    }
+    _pwdChangeRequired = false;
+  } catch (e) {
+    err.textContent = e.message || 'Could not update password';
+  } finally {
+    btn.textContent = 'Update Password'; btn.disabled = false;
+  }
+}
+
+document.getElementById('login-password').addEventListener('keydown', e => {
+  if (e.key === 'Enter') doLogin();
+});
+
+async function doLogout() {
+  stopPolling();
+  await fetch('/api/logout', { method: 'POST' });
+  tickets = [];
+  isAdmin = false;
+  _csrfToken = null;
+  _pwdChangeRequired = false;
+  document.getElementById('password-change-screen').classList.remove('visible');
+  document.getElementById('admin-nav-tab').style.display = 'none';
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('login-username').value = '';
+  document.getElementById('login-password').value = '';
+}
+
+async function checkAuth() {
+  try {
+    const res = await fetch('/api/me');
+    const data = await res.json();
+    if (data.user) {
+      isAdmin = !!data.isAdmin;
+      if (data.mustChangePassword) {
+        showPasswordChangeRequired(data.user);
+      } else {
+        await enterApp(data.user);
+      }
+    }
+  } catch(e) {}
+}
+
+// ---- POLLING ----
+function buildTimerOffsets() {
+  const now = Date.now();
+  const newOffsets = {};
+  tickets.forEach(t => {
+    if (t.running && !t.completed) {
+      newOffsets[t.id] = { base: t.liveElapsed || 0, since: now };
+    }
+  });
+  timerOffsets = newOffsets;
+}
+
+function localTick() {
+  const now = Date.now();
+  tickets.forEach(t => {
+    if (!t.running || t.completed) return;
+    const el = document.getElementById('timer-' + t.id);
+    if (!el) return;
+    const offset = timerOffsets[t.id];
+    if (!offset) return;
+    const elapsed = offset.base + (now - offset.since) / 1000;
+    const newText = formatTime(elapsed);
+    if (el.textContent !== newText) el.textContent = newText;
+  });
+}
+
+function startPolling() {
+  stopPolling();
+  localTickInterval = setInterval(localTick, 1000);
+  serverSyncInterval = setInterval(async () => {
+    try {
+      const res = await fetch('/api/tickets');
+      if (res.ok) {
+        tickets = await res.json();
+        buildTimerOffsets();
+        renderTickets();
+        localTick();
+      }
+    } catch(e) {}
+  }, 5000);
+}
+
+function stopPolling() {
+  if (localTickInterval) { clearInterval(localTickInterval); localTickInterval = null; }
+  if (serverSyncInterval) { clearInterval(serverSyncInterval); serverSyncInterval = null; }
+}
+
+// ---- NAVIGATION ----
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  const tabs = document.querySelectorAll('.nav-tab');
+  if (name === 'active') tabs[0].classList.add('active');
+  else if (name === 'history') tabs[1].classList.add('active');
+  else if (name === 'admin') document.getElementById('admin-nav-tab').classList.add('active');
+  if (name === 'history') loadHistory();
+  if (name === 'admin') loadAdminPage();
+}
+
+// ---- UTILS ----
+function formatTime(seconds) {
+  const s = Math.floor(seconds || 0);
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  return h > 0
+    ? `${h}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`
+    : `${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+}
+
+// ---- TICKETS ----
+async function loadTickets() {
+  const res = await fetch('/api/tickets');
+  if (!res.ok) return;
+  tickets = await res.json();
+  buildTimerOffsets();
+  document.getElementById('active-date').textContent =
+    new Date().toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric' });
+  renderTickets();
+}
+
+function renderCard(ticket, readonly) {
+  const elapsed = ticket.liveElapsed || 0;
+  const isRunning = ticket.running && !ticket.completed;
+  const statusLabel = ticket.completed ? 'Completed' : (ticket.running ? 'Running' : 'Paused');
+  const statusClass = ticket.completed ? 'status-completed' : (ticket.running ? 'status-running' : 'status-paused');
+  const cardClass = (ticket.completed ? 'completed' : (ticket.running ? 'running' : '')) + (readonly ? ' readonly' : '');
+
+  const mobileActions = (readonly || ticket.completed) ? '' : `
+    <div class="card-actions mobile-only">
+      ${isRunning
+        ? `<button class="card-btn stop" onclick="stopTicket('${ticket.id}')">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>
+            Pause
+           </button>`
+        : `<button class="card-btn play" onclick="startTicket('${ticket.id}')">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M6 4l14 8-14 8V4z"/></svg>
+            Resume
+           </button>`
+      }
+      <button class="card-btn complete" onclick="completeTicket('${ticket.id}')">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 13l4 4L19 7"/></svg>
+        Done
+      </button>
+      <button class="card-btn delete" onclick="deleteTicket('${ticket.id}')">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        Delete
+      </button>
+    </div>`;
+
+  const mobileDoneRow = (!readonly && ticket.completed) ? `
+    <div class="card-done-row mobile-only">
+      <span class="done-label">Total time</span>
+      <span class="done-time">${formatTime(elapsed)}</span>
+      <button class="btn-remove" onclick="deleteTicket('${ticket.id}')">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>` : '';
+
+  const desktopActions = readonly
+    ? (ticket.completed
+        ? `<div class="completed-inline"><span class="completed-time-badge">${formatTime(elapsed)}</span></div>`
+        : '')
+    : (ticket.completed
+        ? `<div class="completed-inline">
+            <span class="completed-time-badge">${formatTime(elapsed)}</span>
+            <button class="btn-icon delete" onclick="deleteTicket('${ticket.id}')">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
+            </button>
+          </div>`
+        : `<div class="card-inline-actions">
+            ${isRunning
+              ? `<button class="btn-icon stop" onclick="stopTicket('${ticket.id}')">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>
+                 </button>`
+              : `<button class="btn-icon play" onclick="startTicket('${ticket.id}')">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M6 4l14 8-14 8V4z"/></svg>
+                 </button>`
+            }
+            <button class="btn-icon complete" onclick="completeTicket('${ticket.id}')">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 13l4 4L19 7"/></svg>
+            </button>
+            <button class="btn-icon delete" onclick="deleteTicket('${ticket.id}')">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
+            </button>
+          </div>`);
+
+  return `<div class="ticket-card ${cardClass}">
+    <div class="card-top">
+      <div class="card-top-row1">
+        <div class="ticket-info">
+          <div class="ticket-number">${ticket.ticketNumber}</div>
+          <div class="ticket-status ${statusClass}">${statusLabel}</div>
+        </div>
+        ${desktopActions}
+      </div>
+      <div class="ticket-timer ${isRunning ? 'running' : ''}" id="timer-${ticket.id}">${formatTime(elapsed)}</div>
+    </div>
+    ${mobileActions}
+    ${mobileDoneRow}
+  </div>`;
+}
+
+function renderSection(label, labelClass, items, readonly) {
+  if (items.length === 0) return '';
+  return `<div class="ticket-section">
+    <div class="ticket-section-header">
+      <span class="ticket-section-label ${labelClass}">${label}</span>
+      <span class="ticket-section-count">${items.length}</span>
+      <div class="ticket-section-line"></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      ${items.map(t => renderCard(t, readonly)).join('')}
+    </div>
+  </div>`;
+}
+
+function renderTickets() {
+  const list = document.getElementById('tickets-list');
+  const running   = tickets.filter(t => !t.completed && t.running);
+  const paused    = tickets.filter(t => !t.completed && !t.running);
+  const completed = tickets.filter(t => t.completed);
+
+  const totalElapsed = tickets.reduce((sum, t) => sum + (t.liveElapsed || 0), 0);
+  document.getElementById('active-stats').innerHTML = `
+    <div class="stat-chip"><div class="val">${running.length + paused.length}</div><div class="lbl">Active</div></div>
+    <div class="stat-chip"><div class="val" style="color:var(--green)">${running.length}</div><div class="lbl">Running</div></div>
+    <div class="stat-chip"><div class="val">${completed.length}</div><div class="lbl">Done Today</div></div>
+    <div class="stat-chip"><div class="val" style="color:var(--blue-200)">${formatTime(totalElapsed)}</div><div class="lbl">Total</div></div>
+  `;
+
+  if (tickets.length === 0) {
+    list.innerHTML = `<div class="empty-state">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <rect x="3" y="3" width="18" height="18" rx="3"/>
+        <path d="M8 12h8M12 8v8"/>
+      </svg>
+      <p>No tickets tracked yet</p>
+      <small>Add a ticket number above to start tracking</small>
+    </div>`;
+    return;
+  }
+
+  list.innerHTML =
+    renderSection('Running', 'label-running', running, false) +
+    renderSection('Paused', 'label-paused', paused, false) +
+    renderSection('Done Today', 'label-done', completed, false);
+}
+
+async function addTicket() {
+  const input = document.getElementById('ticket-input');
+  const errorEl = document.getElementById('input-error');
+  const val = input.value.trim();
+  errorEl.textContent = '';
+  if (!val) { errorEl.textContent = 'Please enter a ticket number.'; return; }
+  try {
+    const res = await fetch('/api/tickets', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ticketNumber: val })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+    tickets.push(data);
+    input.value = '';
+    buildTimerOffsets();
+    renderTickets();
+    toast('Timer started for ' + data.ticketNumber, 'success');
+  } catch (e) {
+    errorEl.textContent = e.message;
+  }
+}
+
+async function startTicket(id) {
+  const res = await fetch(`/api/tickets/${id}`, {
+    method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'start' })
+  });
+  const updated = await res.json();
+  tickets[tickets.findIndex(t => t.id === id)] = updated;
+  buildTimerOffsets();
+  renderTickets();
+}
+
+async function stopTicket(id) {
+  const res = await fetch(`/api/tickets/${id}`, {
+    method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'stop' })
+  });
+  const updated = await res.json();
+  tickets[tickets.findIndex(t => t.id === id)] = updated;
+  renderTickets();
+}
+
+async function completeTicket(id) {
+  const ticket = tickets.find(t => t.id === id);
+  const res = await fetch(`/api/tickets/${id}`, {
+    method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'complete' })
+  });
+  const updated = await res.json();
+  tickets[tickets.findIndex(t => t.id === id)] = updated;
+  renderTickets();
+  toast(ticket.ticketNumber + ' marked complete', 'info');
+}
+
+async function deleteTicket(id) {
+  await fetch(`/api/tickets/${id}`, { method: 'DELETE' });
+  tickets = tickets.filter(t => t.id !== id);
+  renderTickets();
+}
+
+// ---- HISTORY ----
+async function loadHistory() {
+  const res = await fetch('/api/history');
+  const history = await res.json();
+  const sortVal = document.getElementById('sort-select').value;
+  const list = document.getElementById('history-list');
+
+  if (!history.length) {
+    list.innerHTML = `<div class="empty-state">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M12 8v4l3 3M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+      </svg>
+      <p>No history yet</p>
+      <small>Completed tickets appear here the following day</small>
+    </div>`;
+    return;
+  }
+
+  const grouped = {};
+  history.forEach(t => {
+    const day = new Date(t.completedAt).toDateString();
+    if (!grouped[day]) grouped[day] = [];
+    grouped[day].push(t);
+  });
+
+  let days = Object.keys(grouped);
+  days.sort((a, b) => sortVal === 'newest' ? new Date(b) - new Date(a) : new Date(a) - new Date(b));
+
+  list.innerHTML = days.map(day => {
+    const dayTickets = grouped[day];
+    const total = dayTickets.reduce((sum, t) => sum + (t.totalTime || t.elapsed || 0), 0);
+    const d = new Date(day);
+    const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);
+    const label = d.toDateString() === new Date().toDateString()
+      ? 'Today'
+      : d.toDateString() === yesterday.toDateString()
+        ? 'Yesterday'
+        : d.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric', year:'numeric' });
+
+    return `<div class="history-group">
+      <div class="history-group-header">
+        <span>${label}</span>
+        <span class="history-group-total">${formatTime(total)}</span>
+      </div>
+      ${dayTickets.map(t => `
+        <div class="history-row">
+          <span class="history-ticket-num">${t.ticketNumber}</span>
+          <span class="history-completed-at">${new Date(t.completedAt).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'})}</span>
+          <span class="history-time">${formatTime(t.totalTime || t.elapsed || 0)}</span>
+          <button class="btn-del-history" onclick="deleteHistory('${t.id}')">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
+          </button>
+        </div>`).join('')}
+    </div>`;
+  }).join('');
+}
+
+async function deleteHistory(id) {
+  await fetch(`/api/history/${id}`, { method: 'DELETE' });
+  loadHistory();
+}
+
+// ---- ADMIN ----
+async function loadAdminPage() {
+  await loadUsersList();
+  populateWorkViewerSelect();
+}
+
+async function loadUsersList() {
+  const res = await fetch('/api/admin/users');
+  if (!res.ok) return;
+  const users = await res.json();
+
+  document.getElementById('user-count').textContent = `${users.length} user${users.length !== 1 ? 's' : ''}`;
+
+  const tbody = document.getElementById('users-tbody');
+  tbody.innerHTML = users.map(u => `
+    <tr>
+      <td>
+        <span class="user-badge">
+          <span class="user-dot" style="background:${u.isAdmin ? 'var(--purple)' : 'var(--text-muted)'}"></span>
+          ${u.username}
+        </span>
+      </td>
+      <td>
+        <span class="role-badge ${u.isAdmin ? 'admin' : 'member'}">${u.isAdmin ? 'Admin' : 'Member'}</span>
+      </td>
+      <td style="text-align:right">
+        ${u.isAdmin ? '' : `<button class="btn-delete-user" onclick="deleteUser('${u.username}')">Remove</button>`}
+      </td>
+    </tr>
+  `).join('');
+
+  // Also update the work viewer dropdown
+  const sel = document.getElementById('work-viewer-select');
+  const current = sel.value;
+  sel.innerHTML = '<option value="">Select a user...</option>' +
+    users.map(u => `<option value="${u.username}" ${u.username === current ? 'selected' : ''}>${u.username}${u.isAdmin ? ' (admin)' : ''}</option>`).join('');
+}
+
+function populateWorkViewerSelect() {
+  // Already handled in loadUsersList
+}
+
+async function createUser() {
+  const username = document.getElementById('new-username').value.trim();
+  const password = document.getElementById('new-password').value;
+  const errEl = document.getElementById('add-user-error');
+  errEl.textContent = '';
+
+  try {
+    const res = await fetch('/api/admin/users', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+    document.getElementById('new-username').value = '';
+    document.getElementById('new-password').value = '';
+    await loadUsersList();
+    toast(`User "${username}" created`, 'success');
+  } catch(e) {
+    errEl.textContent = e.message;
+  }
+}
+
+async function deleteUser(username) {
+  if (!confirm(`Remove user "${username}"? Their ticket data will be kept on disk.`)) return;
+  try {
+    const res = await fetch(`/api/admin/users/${username}`, { method: 'DELETE' });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+    await loadUsersList();
+    toast(`User "${username}" removed`, 'info');
+  } catch(e) {
+    toast(e.message, 'error');
+  }
+}
+
+let workViewerCurrentUser = null;
+
+async function loadWorkView() {
+  const username = document.getElementById('work-viewer-select').value;
+  if (!username) { toast('Select a user first', 'error'); return; }
+
+  workViewerCurrentUser = username;
+  document.getElementById('work-viewer-username').textContent = username;
+  document.getElementById('work-viewer-results').style.display = 'block';
+
+  switchWorkTab('active'); // reset to active tab and load it
+
+  // Load history in background too
+  fetchWorkHistory(username);
+}
+
+async function fetchWorkActive(username) {
+  const res = await fetch(`/api/admin/tickets/${username}`);
+  const tickets = await res.json();
+  const pane = document.getElementById('wv-pane-active');
+
+  if (tickets.length === 0) {
+    pane.innerHTML = `<div class="empty-state" style="padding:32px 20px">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M8 12h8"/></svg>
+      <p>No active tickets</p>
+      <small>${username} has nothing in progress right now</small>
+    </div>`;
+    return;
+  }
+
+  const running   = tickets.filter(t => !t.completed && t.running);
+  const paused    = tickets.filter(t => !t.completed && !t.running);
+  const completed = tickets.filter(t => t.completed);
+
+  pane.innerHTML =
+    renderSection('Running', 'label-running', running, true) +
+    renderSection('Paused', 'label-paused', paused, true) +
+    renderSection('Done Today', 'label-done', completed, true);
+}
+
+async function fetchWorkHistory(username) {
+  const res = await fetch(`/api/admin/history/${username}`);
+  const history = await res.json();
+  const pane = document.getElementById('wv-pane-history');
+
+  if (!history.length) {
+    pane.innerHTML = `<div class="empty-state" style="padding:32px 20px">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 8v4l3 3M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      <p>No history yet</p>
+      <small>${username} has no completed tickets on record</small>
+    </div>`;
+    return;
+  }
+
+  const grouped = {};
+  history.forEach(t => {
+    const day = new Date(t.completedAt).toDateString();
+    if (!grouped[day]) grouped[day] = [];
+    grouped[day].push(t);
+  });
+
+  const days = Object.keys(grouped).sort((a, b) => new Date(b) - new Date(a));
+
+  pane.innerHTML = days.map(day => {
+    const dayTickets = grouped[day];
+    const total = dayTickets.reduce((sum, t) => sum + (t.totalTime || t.elapsed || 0), 0);
+    const d = new Date(day);
+    const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);
+    const label = d.toDateString() === new Date().toDateString()
+      ? 'Today'
+      : d.toDateString() === yesterday.toDateString()
+        ? 'Yesterday'
+        : d.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric', year:'numeric' });
+
+    return `<div class="history-group">
+      <div class="history-group-header">
+        <span>${label}</span>
+        <span class="history-group-total">${formatTime(total)}</span>
+      </div>
+      ${dayTickets.map(t => `
+        <div class="history-row">
+          <span class="history-ticket-num">${t.ticketNumber}</span>
+          <span class="history-completed-at">${new Date(t.completedAt).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'})}</span>
+          <span class="history-time">${formatTime(t.totalTime || t.elapsed || 0)}</span>
+        </div>`).join('')}
+    </div>`;
+  }).join('');
+}
+
+function switchWorkTab(tab) {
+  document.querySelectorAll('.work-viewer-tab').forEach((b, i) => {
+    b.classList.toggle('active', (i === 0 && tab === 'active') || (i === 1 && tab === 'history'));
+  });
+  document.querySelectorAll('.work-viewer-pane').forEach(p => p.classList.remove('active'));
+  document.getElementById(`wv-pane-${tab}`).classList.add('active');
+
+  if (tab === 'active' && workViewerCurrentUser) fetchWorkActive(workViewerCurrentUser);
+  if (tab === 'history' && workViewerCurrentUser) fetchWorkHistory(workViewerCurrentUser);
+}
+
+// ---- TOAST ----
+function toast(message, type = 'info') {
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.textContent = message;
+  document.getElementById('toasts').appendChild(el);
+  setTimeout(() => el.remove(), 3200);
+}
+
+checkAuth();
+</script>
+</body>
+</html>
