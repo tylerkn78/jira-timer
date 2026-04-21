@@ -1645,6 +1645,14 @@ function localTick() {
   });
 }
 
+function ticketsSignature(tix) {
+  // A string that changes only when something meaningful changes:
+  // count, ids, running/completed status, or elapsed buckets (10s granularity).
+  return tix.map(t =>
+    `${t.id}:${t.running ? 1 : 0}:${t.completed ? 1 : 0}:${Math.floor((t.elapsed || 0) / 10)}`
+  ).join('|');
+}
+
 function startPolling() {
   stopPolling();
   localTickInterval = setInterval(localTick, 1000);
@@ -1652,9 +1660,13 @@ function startPolling() {
     try {
       const res = await fetch('/api/tickets');
       if (res.ok) {
-        tickets = await res.json();
+        const fresh = await res.json();
+        const changed = ticketsSignature(fresh) !== ticketsSignature(tickets);
+        tickets = fresh;
         buildTimerOffsets();
-        renderTickets();
+        // Only rebuild the DOM if something actually changed.
+        // Timer numbers are handled smoothly by localTick every second.
+        if (changed) renderTickets();
         localTick();
       }
     } catch(e) {}
