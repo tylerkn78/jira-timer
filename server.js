@@ -239,6 +239,7 @@ app.use(helmet({
       // The UI uses inline <script> and <style>. A future refactor could move
       // these to separate files and drop 'unsafe-inline'.
       scriptSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrcAttr: ["'unsafe-inline'"],
       styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
       fontSrc: ["'self'", 'https://fonts.gstatic.com', 'data:'],
       imgSrc: ["'self'", 'data:'],
