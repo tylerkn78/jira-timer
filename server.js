@@ -496,7 +496,7 @@ app.get('/api/tickets', authRequired, async (req, res) => {
 });
 
 app.post('/api/tickets', authRequired, doubleCsrfProtection, writeLimiter, async (req, res) => {
-  const { ticketNumber } = req.body || {};
+  const { ticketNumber, description } = req.body || {};
   if (typeof ticketNumber !== 'string' || ticketNumber.length > 32) {
     return res.status(400).json({ error: 'Invalid ticket number' });
   }
@@ -504,6 +504,7 @@ app.post('/api/tickets', authRequired, doubleCsrfProtection, writeLimiter, async
   if (!TICKET_REGEX.test(normalized)) {
     return res.status(400).json({ error: 'Invalid ticket number format (e.g. IT-12345)' });
   }
+  const desc = (typeof description === 'string') ? description.trim().slice(0, 120) : '';
   try {
     const ticket = await updateData(req.session.user, (data) => {
       if (data.active.find(t => t.ticketNumber === normalized)) {
@@ -516,6 +517,7 @@ app.post('/api/tickets', authRequired, doubleCsrfProtection, writeLimiter, async
       const t = {
         id: crypto.randomUUID(),
         ticketNumber: normalized,
+        description: desc,
         createdAt: new Date().toISOString(),
         running: true,
         startedAt: new Date().toISOString(),
@@ -536,7 +538,7 @@ app.post('/api/tickets', authRequired, doubleCsrfProtection, writeLimiter, async
 
 app.patch('/api/tickets/:id', authRequired, doubleCsrfProtection, writeLimiter, async (req, res) => {
   const { action } = req.body || {};
-  if (!['start', 'stop', 'complete'].includes(action)) {
+  if (!['start', 'stop', 'complete', 'describe'].includes(action)) {
     return res.status(400).json({ error: 'Invalid action' });
   }
   try {
@@ -552,6 +554,9 @@ app.patch('/api/tickets/:id', authRequired, doubleCsrfProtection, writeLimiter, 
       } else if (action === 'complete') {
         t.elapsed = currentElapsed; t.running = false; t.completed = true;
         t.completedAt = new Date().toISOString(); t.totalTime = currentElapsed; t.startedAt = null;
+      } else if (action === 'describe') {
+        const desc = req.body.description;
+        if (typeof desc === 'string') t.description = desc.trim().slice(0, 120);
       }
       data.active[idx] = t;
       return t;

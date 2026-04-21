@@ -551,6 +551,65 @@
     margin-top: 2px;
   }
 
+  .ticket-desc {
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+    margin-top: 5px;
+    line-height: 1.4;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: pointer;
+    padding: 2px 5px;
+    margin-left: -5px;
+    border-radius: 4px;
+    transition: background 0.15s;
+  }
+  .ticket-desc:hover { background: var(--surface-3); }
+  .ticket-desc.empty { color: var(--text-muted); font-style: italic; }
+
+  .ticket-desc-input {
+    width: 100%;
+    padding: 4px 6px;
+    margin-top: 5px;
+    background: var(--surface-3);
+    border: 1px solid var(--blue-400);
+    border-radius: 5px;
+    color: var(--text-primary);
+    font-family: 'Sora', sans-serif;
+    font-size: 0.78rem;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(38,132,255,0.12);
+  }
+
+  .desc-input {
+    width: 100%;
+    padding: 10px 14px;
+    margin-top: 6px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text-primary);
+    font-family: 'Sora', sans-serif;
+    font-size: 0.85rem;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    appearance: none;
+  }
+  .desc-input::placeholder { color: var(--text-muted); font-size: 0.82rem; }
+  .desc-input:focus { border-color: var(--blue-400); box-shadow: 0 0 0 3px rgba(38,132,255,0.12); }
+
+  .history-desc {
+    font-size: 0.74rem;
+    color: var(--text-muted);
+    flex: 2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-style: italic;
+    min-width: 0;
+  }
+
   .status-running { color: var(--green); }
   .status-paused { color: var(--yellow); }
   .status-completed { color: var(--text-muted); }
@@ -1255,6 +1314,9 @@
         onkeydown="if(event.key==='Enter') addTicket()">
       <button class="btn-add" onclick="addTicket()">+ Add</button>
     </div>
+    <input class="desc-input" id="desc-input" type="text" placeholder="Brief description (optional)"
+      maxlength="120" autocorrect="off" spellcheck="false"
+      onkeydown="if(event.key==='Enter') addTicket()">
     <div class="input-error" id="input-error"></div>
     <div class="tickets-list" id="tickets-list"></div>
   </div>
@@ -1711,6 +1773,14 @@ function renderCard(ticket, readonly) {
         <div class="ticket-info">
           <div class="ticket-number">${ticket.ticketNumber}</div>
           <div class="ticket-status ${statusClass}">${statusLabel}</div>
+          ${readonly
+            ? (ticket.description ? `<div class="ticket-desc">${escHtml(ticket.description)}</div>` : '')
+            : `<div class="ticket-desc ${ticket.description ? '' : 'empty'}"
+                id="desc-display-${ticket.id}"
+                onclick="startEditDesc('${ticket.id}')"
+                title="Click to edit description"
+               >${ticket.description ? escHtml(ticket.description) : 'Add description...'}</div>`
+          }
         </div>
         ${desktopActions}
       </div>
@@ -1767,22 +1837,64 @@ function renderTickets() {
     renderSection('Done Today', 'label-done', completed, false);
 }
 
+function escHtml(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function startEditDesc(id) {
+  const ticket = tickets.find(t => t.id === id);
+  if (!ticket || ticket.completed) return;
+  const display = document.getElementById('desc-display-' + id);
+  if (!display) return;
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.className = 'ticket-desc-input';
+  input.value = ticket.description || '';
+  input.maxLength = 120;
+  input.placeholder = 'Brief description...';
+  display.replaceWith(input);
+  input.focus();
+  input.select();
+  const save = async () => {
+    const newDesc = input.value.trim();
+    try {
+      const res = await fetch(`/api/tickets/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'describe', description: newDesc })
+      });
+      const updated = await res.json();
+      const idx = tickets.findIndex(t => t.id === id);
+      if (idx !== -1) tickets[idx] = updated;
+    } catch (_) {}
+    renderTickets();
+  };
+  input.addEventListener('blur', save);
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+    if (e.key === 'Escape') { input.removeEventListener('blur', save); renderTickets(); }
+  });
+}
+
 async function addTicket() {
   const input = document.getElementById('ticket-input');
+  const descInput = document.getElementById('desc-input');
   const errorEl = document.getElementById('input-error');
   const val = input.value.trim();
+  const desc = descInput.value.trim();
   errorEl.textContent = '';
   if (!val) { errorEl.textContent = 'Please enter a ticket number.'; return; }
   try {
     const res = await fetch('/api/tickets', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ticketNumber: val })
+      body: JSON.stringify({ ticketNumber: val, description: desc })
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error);
     tickets.push(data);
     input.value = '';
+    descInput.value = '';
     buildTimerOffsets();
     renderTickets();
     toast('Timer started for ' + data.ticketNumber, 'success');
@@ -1877,6 +1989,7 @@ async function loadHistory() {
       ${dayTickets.map(t => `
         <div class="history-row">
           <span class="history-ticket-num">${t.ticketNumber}</span>
+          ${t.description ? `<span class="history-desc">${escHtml(t.description)}</span>` : '<span class="history-desc"></span>'}
           <span class="history-completed-at">${new Date(t.completedAt).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'})}</span>
           <span class="history-time">${formatTime(t.totalTime || t.elapsed || 0)}</span>
           <button class="btn-del-history" onclick="deleteHistory('${t.id}')">
@@ -2052,6 +2165,7 @@ async function fetchWorkHistory(username) {
       ${dayTickets.map(t => `
         <div class="history-row">
           <span class="history-ticket-num">${t.ticketNumber}</span>
+          ${t.description ? `<span class="history-desc">${escHtml(t.description)}</span>` : '<span class="history-desc"></span>'}
           <span class="history-completed-at">${new Date(t.completedAt).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'})}</span>
           <span class="history-time">${formatTime(t.totalTime || t.elapsed || 0)}</span>
         </div>`).join('')}
