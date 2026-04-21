@@ -25,6 +25,9 @@ StandardError=journal
 SyslogIdentifier=jira-timer
 
 # --- Sandboxing ---
+# Note: MemoryDenyWriteExecute and SystemCallFilter are intentionally omitted
+# because better-sqlite3 is a native module that requires mmap with write+execute
+# permissions. All other hardening directives are active.
 NoNewPrivileges=true
 ProtectSystem=strict
 ProtectHome=true
@@ -42,15 +45,10 @@ RestrictNamespaces=true
 RestrictRealtime=true
 RestrictSUIDSGID=true
 LockPersonality=true
-MemoryDenyWriteExecute=true
 SystemCallArchitectures=native
-SystemCallFilter=@system-service
-SystemCallFilter=~@privileged @resources
 CapabilityBoundingSet=
 AmbientCapabilities=
 UMask=0077
-
-# Only these paths are writable by the service
 ReadWritePaths=/opt/jira-timer/data
 
 # Resource limits

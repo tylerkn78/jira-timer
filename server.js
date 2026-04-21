@@ -298,7 +298,7 @@ app.use(express.static(path.join(__dirname, 'public'), {
 const { generateToken, doubleCsrfProtection } = doubleCsrf({
   getSecret: () => CSRF_SECRET,
   getSessionIdentifier: (req) => (req.session && req.session.id) || req.ip || 'anon',
-  cookieName: IS_PRODUCTION ? '__Host-jiratimer.csrf' : 'jiratimer.csrf',
+  cookieName: 'jiratimer.csrf',
   cookieOptions: {
     httpOnly: true,
     sameSite: 'strict',
@@ -311,8 +311,13 @@ const { generateToken, doubleCsrfProtection } = doubleCsrf({
 // Endpoint to fetch a CSRF token. Safe because only same-site + authed
 // callers can read the response (CORS not enabled; sameSite=strict on cookie).
 app.get('/api/csrf', (req, res) => {
-  const token = generateToken(req, res);
-  res.json({ csrfToken: token });
+  try {
+    const token = generateToken(req, res, true);
+    res.json({ csrfToken: token });
+  } catch (e) {
+    const token = generateToken(req, res, true);
+    res.json({ csrfToken: token });
+  }
 });
 
 // ============================================================================
@@ -335,7 +340,11 @@ function adminRequired(req, res, next) {
 function passwordChangeGate(req, res, next) {
   if (!req.session.user) return next();
   const user = readUsers().find(u => u.username === req.session.user);
-  if (user && user.mustChangePassword && req.path !== '/api/password' && req.path !== '/api/me' && req.path !== '/api/logout' && req.path !== '/api/csrf') {
+  if (user && user.mustChangePassword
+      && req.path !== '/api/password'
+      && req.path !== '/api/me'
+      && req.path !== '/api/logout'
+      && req.path !== '/api/csrf') {
     return res.status(403).json({ error: 'Password change required', mustChangePassword: true });
   }
   next();
